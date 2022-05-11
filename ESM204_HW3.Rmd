@@ -42,7 +42,7 @@ demand <-function(p, model){
   return(q)
 }
 
-#aggregate demand curve
+#aggregate demand curve ---> Qagg = Qlow(P) + Qlow(h) 
 demand_agg <- function (p) {
   q <- demand(p, low_income) + demand(p, high_income) 
 }
@@ -55,8 +55,6 @@ Qagg <- map(price, demand_agg) %>% unlist()
 ```{r}
 # draw curves
 agg_demand <- tibble(Qagg = Qagg, price = price)
-low_demand <- tibble(q_low_kwh = q_low_kwh , price = price)
-high_demand <- tibble(q_high_kwh = q_high_kwh , price = price)
 
 ggplot(agg_demand, aes(Qagg, price)) +
   geom_line() 
