@@ -42,7 +42,7 @@ lb_to_ton <- (0.85/2204.62)
 MEC <- 5100*lb_to_ton # $.0197
 ``` 
 
-- MEC = $ `r round((MEC/100), 2)` cents per kWh electricity
+- MEC = $ `r round((MEC/100), 2)` cents/kWh electricity
 
 ## Question 2
 
@@ -83,20 +83,22 @@ Qagg_tax <- map(price, demand_agg_tax) %>% unlist()
 df2_tax<- tibble(Qagg = Qagg_tax, price = price_tax)
 market_q_tax <- demand_agg_tax(10)
 ggplot() +
-  geom_line(df2, mapping = aes(x = Qagg, y =price, color = "Agg Demand")) +# Agg demand
+  geom_line(df2, mapping = aes(x = Qagg, y =price, color = "agg. Demand")) +# Agg demand
   geom_line(df2_tax, mapping = aes(x=Qagg_tax, y = price_tax, color = "taxed agg. demand")) + #taxed agg demand
-    geom_abline(slope = coef(model_demand_l)[["q_low_kwh"]], 
-              intercept = coef(model_demand_l)[["(Intercept)"]], color="goldenrod", linetype="twodash") + # Low consumer demand
+  geom_abline(slope = coef(model_demand_l)[["q_low_kwh"]], 
+              intercept = coef(model_demand_l)[["(Intercept)"]], color="purple", linetype="twodash") + # Low consumer demand
   geom_abline(slope = coef(model_demand_h)[["q_high_kwh"]], 
               intercept = coef(model_demand_h)[["(Intercept)"]], color="steelblue", linetype="twodash") + # High consumer demand
-  geom_abline(slope = (10/market_q), intercept = 0, color = "green") + # supply curve
-  geom_abline(slope = 0, intercept = MEC, color = "red") + # MEC
+  geom_abline(slope = (10/market_q), intercept = 0, color = "orange", aes(value = "supply")) + # supply curve
+  geom_abline(slope = 0, intercept = MEC, color = "darkolivegreen3", aes(value = "MEC")) + # MEC
   #geom_abline(slope = (10/market_q), intercept = MEC, color = "purple") + #we need to delete this line because this is a tax on the consumer
   scale_x_continuous(limits = c(0,850000), expand = c(0, 0)) +
   scale_y_continuous(limits = c(0,35), expand = c(0, 0)) +
   labs(x = "Electricity (kWh)", y = "Price (cents)") +
   #geom_line(taxcurve, mapping = aes(x = Qagg, y = price, color = "orange"))+
-  theme_bw()
+  theme_bw() +
+  scale_color_manual(breaks = c("agg. demand", "taxed agg. demand", "supply", "MEC", "low consumer demand", "high consumer demand"),
+                     values = c("agg. demand" = "black", "taxed agg. demand" = "red", "supply" = "orange", "MEC" = "darkolivegreen3", "high consumer demand" = "steelblue", "low consumer demand" = "purple"))
 slope_supply <- (10/market_q)
 # supply curve equation: P = 0.0000186Q
 ```
