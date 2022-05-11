@@ -9,7 +9,6 @@ output: html_document
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 library(here)
 library(tidyverse)
-library(equatiomatic)
 library(broom)
 library(janitor)
 library(rootSolve)
@@ -19,15 +18,68 @@ to create a function, we want to sum Qs
 step one is to define function to set a demand
 function is basically saying that first co
 
-
-## ACTUAL BEGINNING OF ASSIGNMENT
-
 ```{r}
 # read in data
 energy_demand <- read_csv("HW3_data.csv") %>% 
   select(-1) %>% 
   clean_names()
 ```
+
+```{r}
+# linear regression model
+
+low_income <- lm(price_cents ~ q_low_kwh, data = energy_demand)
+high_income <- lm(price_cents ~ q_high_kwh, data = energy_demand)
+
+```
+
+```{r}
+# define function to get demand curve
+
+demand <-function(p, model){
+  q <- (p - model$coefficients[[1]])/model$coefficients[[2]]
+  q <- ifelse(q<0,0,q)  #addresses differences in y-intercepts
+  return(q)
+}
+
+#aggregate demand curve ---> Qagg = Qlow(P) + Qlow(h) 
+demand_agg <- function (p) {
+  q <- demand(p, low_income) + demand(p, high_income) 
+}
+
+price = seq(0,30,length.out = 100)
+Qagg <- map(price, demand_agg) %>% unlist()
+```
+
+
+```{r}
+# draw curves
+agg_demand <- tibble(Qagg = Qagg, price = price)
+
+ggplot(agg_demand, aes(Qagg, price)) +
+  geom_line() 
+
++
+  geom_line(aes(y = q_low_kwh), color = "green") +
+  geom_line(aes(y = q_high_kwh), color = "blue")
+
+  
+  
+  
+  
+  
+  geom_abline(slope = coef(low_income)[["q_low_kwh"]], 
+              intercept = coef(low_income)[["(Intercept)"]], color="green") + # low income demand
+  geom_abline(slope = coef(high_income)[["q_high_kwh"]], 
+              intercept = coef(high_income)[["(Intercept)"]], color="purple") + # high income demand
+  scale_x_continuous(limits = c(0,850000), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0,35), expand = c(0, 0)) +
+  labs(x = "Electricity (kWh)", y = "Price (cents)") +
+  theme_bw()
+```
+
+
+
 
 ## Question 1
 - Current electricity cost is $0.10/kWh
