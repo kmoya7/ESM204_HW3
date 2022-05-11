@@ -79,9 +79,8 @@ ggplot() +
               intercept = coef(low_income)[["(Intercept)"]], color="purple", linetype="twodash") + # Low consumer demand
   geom_abline(slope = coef(high_income)[["q_high_kwh"]], 
               intercept = coef(high_income)[["(Intercept)"]], color="steelblue", linetype="twodash") + # High consumer demand
-  geom_abline(slope = (0.10*market_q), intercept = 0, color = "orange", aes(value = "supply")) + # supply curve
+  geom_abline(slope = (10/market_q), intercept = 0, color = "orange", aes(value = "supply")) + # supply curve
   geom_abline(slope = 0, intercept = MEC, color = "darkolivegreen3", aes(value = "MEC")) + # MEC
-  #geom_abline(slope = (10/market_q), intercept = MEC, color = "purple") + #we need to delete this line because this is a tax on the consumer
   scale_x_continuous(limits = c(0,850000), expand = c(0, 0)) +
   scale_y_continuous(limits = c(0,35), expand = c(0, 0)) +
   labs(x = "Electricity (kWh)", y = "Price (cents)") +
@@ -115,7 +114,25 @@ env_cost_sq <- (MEC*market_q)/100
 # Environmental cost $10,553.65
 ```
 
--
+```{r}
+# consumer surplus of agg. demand
+CS_agg <- function(p){
+  cs <- CS(p, low_income) + CS(p, high_income)
+  return(cs)
+}
+
+```
+
+# Question 3
+```{r}
+# consumer surplus 
+CS <- function(p, model) {
+  q <- demand(p, model)
+  cs <- 0.5 *(model$coefficient[[1]]- p)*q
+  return(cs)
+}
+```
+
 - The supply curve is the green curve, which represents the marginal private cost curve. Its equation is P = `r round(slope_supply, 7)` Q
 
 Under status quo:
