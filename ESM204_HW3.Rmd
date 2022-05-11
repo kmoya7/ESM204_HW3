@@ -11,59 +11,127 @@ library(here)
 library(tidyverse)
 library(equatiomatic)
 library(broom)
+library(janitor)
+library(rootSolve)
 ```
+
+to create a function, we want to sum Qs
+step one is to define function to set a demand
+function is basically saying that first co
+
+
+## ACTUAL BEGINNING OF ASSIGNMENT
 
 ```{r}
 # read in data
-energy_demand <-read_csv(here("HW3_data.csv"))
+energy_demand <- read_csv("HW3_data.csv") %>% 
+  select(-1) %>% 
+  clean_names()
+```
+
+## Question 1
+- Current electricity cost is $0.10/kWh
+- One kWh electricity emits 0.85 lbs CO2
+- 2204.62 lbs in 1 metric ton 
+- Interim SCC value of $51/metric ton or 5100 cents/metric ton (total external cost)
+
+```{r}
+# convert lbs to metric ton
+lb_to_ton <- (0.85/2204.62) 
+# one kWh electricity emits 0.0003856 metric tons of carbon
+MEC <- 5100*lb_to_ton # $.0197
+``` 
+
+- MEC = $ `r round((MEC/100), 2)` cents per kWh electricity
+
+## Question 2
+
+```{r}
+model_demand_l <- lm(price_cents  ~ q_low_kwh, data=energy_demand)
+model_demand_h <- lm(price_cents ~ q_high_kwh, data=energy_demand)
+# need to rearrange the parameter to get Q(P)! 
+# Qagg = Qlow(P) + Qlow(h) 
+# Importantly, since their intercepts are different, we know that Qagg(P) will have a kink. I include an ifelse() statement to take care of the kink.
+# define a function to get demand
+demand <- function(p, model){
+  q <- (p - model$coefficients[[1]])/model$coefficients[[2]]
+  q <- ifelse(q<0,0,q)
+  return(q)
+}
+# for each p level, return estimated aggregate demand
+demand_agg <- function(p){
+  q <- demand(p, model_demand_l) + demand(p, model_demand_h)
+  return(q)
+}
+price = seq(0, 31.6, length.out = 100)
+Qagg <- map(price, demand_agg) %>% unlist()
+df2<- tibble(Qagg = Qagg, price = price)
+market_q <- demand_agg(10)
+#taxcurve <- df2 - MEC
+# new aggregate with tax 
+demand_tax <- function(p, model){
+  q <- (p - (model$coefficients[[1]]-1.97))/model$coefficients[[2]]
+  q <- ifelse(q<0,0,q)
+  return(q)
+}
+demand_agg_tax <- function(p){
+  q <- demand_tax(p, model_demand_l) + demand(p, model_demand_h) # high consumers are not subjugated to the tax
+  return(q)
+}
+price_tax = seq(0, 31.6, length.out = 100)
+Qagg_tax <- map(price, demand_agg_tax) %>% unlist()
+df2_tax<- tibble(Qagg = Qagg_tax, price = price_tax)
+market_q_tax <- demand_agg_tax(10)
+ggplot() +
+  geom_line(df2, mapping = aes(x = Qagg, y =price, color = "black")) +# Agg demand
+  geom_line(df2_tax, mapping = aes(x=Qagg_tax, y = price_tax)) + #taxed agg demand
+    geom_abline(slope = coef(model_demand_l)[["q_low_kwh"]], 
+              intercept = coef(model_demand_l)[["(Intercept)"]], color="goldenrod", linetype="twodash") + # Low consumer demand
+  geom_abline(slope = coef(model_demand_h)[["q_high_kwh"]], 
+              intercept = coef(model_demand_h)[["(Intercept)"]], color="steelblue", linetype="twodash") + # High consumer demand
+  geom_abline(slope = (10/market_q), intercept = 0, color = "green") + # supply curve
+  geom_abline(slope = 0, intercept = MEC, color = "red") + # MEC
+  #geom_abline(slope = (10/market_q), intercept = MEC, color = "purple") + #we need to delete this line because this is a tax on the consumer
+  scale_x_continuous(limits = c(0,850000), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0,35), expand = c(0, 0)) +
+  labs(x = "Electricity (kWh)", y = "Price (cents)") +
+  #geom_line(taxcurve, mapping = aes(x = Qagg, y = price, color = "orange"))+
+  theme_bw()
+slope_supply <- (10/market_q)
+# supply curve equation: P = 0.0000186Q
 ```
 
 ```{r}
-# plot data
-ggplot(data = energy_demand, aes(x = Q_Low_Kwh, y = Price_Cents)) +
-  geom_point(color = "slateblue1", size = 1.6, alpha = 0.4) +
-  geom_smooth(method = 'lm', se = FALSE, color = "slateblue4")
-ggplot(data = energy_demand, aes(x = Q_High_Kwh, y = Price_Cents)) +
-  geom_point(color = "slateblue1", size = 1.6, alpha = 0.4) +
-  geom_smooth(method = 'lm', se = FALSE, color = "red")
+# calculating surpluses at market equilibrium
+# CS calculation needs Y intercept of high demand/demand agg curve --> at 0 kWh, price would be $0.316
+high_sum <-summary.lm(model_demand_h)
+high_y_int <- high_sum$coefficients[1, 1] 
+low_sum <- summary.lm(model_demand_l)
+low_y_int <- low_sum$coefficients[1, 1]
+# Converted back to dollars
+cs_sq_high <- 0.5*market_q*((high_y_int/100) - 0.10)
+# High consumer benefit $57,984.10
+cs_sq_low <- 0.5*market_q*((low_y_int/100) - 0.10)
+# Low consumer benefit $35,882.29
+cs_sq_total <- cs_sq_high + cs_sq_low
+# Consumer benefit $93,866.39
+ps_sq <- 0.5*market_q*0.10
+# Producer benefit $26,835.97
+env_cost_sq <- (MEC*market_q)/100
+# Environmental cost $10,553.65
 ```
 
-```{r}
-# Linear regression model
-low_lm <- lm(Price_Cents ~ 0 + Q_Low_Kwh , data = energy_demand)
-summary(low_lm)
-low_tidy <- tidy(low_lm)
-low_tidy
-low_income <- lm(formula = Price_Cents ~ Q_Low_Kwh, data = energy_demand)
+- Aggregate monthly demand curve is the black curve with a kink, which is the horizontal sum of the low (gold dashed) and high (blue dashed) demand curves.
+- The supply curve is the green curve, which represents the marginal private cost curve. Its equation is P = `r round(slope_supply, 7)`Q
 
-high_lm <- lm(Q_High_Kwh ~ 0 + Price_Cents, data = energy_demand)
-summary(high_lm)
-high_tidy <- tidy(high_lm)
-high_tidy
-high_income <- lm(formula = Price_Cents ~ Q_High_Kwh, data = energy_demand)
-```
+Under status quo:
+- Consumer benefit = $`r round(cs_sq_total, 2)` 
+- Producer benefit = $`r round(ps_sq, 2)`
+- Environmental cost = $`r round(env_cost_sq, 2)`
 
-```{r}
+## Question 3
 
-```
+The high-income consumers get much more of total benefit, at `r round(cs_sq_high, 2)` USD compared to `r round(cs_sq_low, 2)`USD for low-income consumers.
 
+## Question 4 
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
