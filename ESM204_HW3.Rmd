@@ -94,8 +94,8 @@ ggplot() +
   labs(x = "Electricity (kWh)", y = "Price (cents)") +
   #geom_line(taxcurve, mapping = aes(x = Qagg, y = price, color = "orange"))+
   theme_bw() +
-  scale_color_manual(breaks = c("agg. demand", "taxed agg. demand", "supply", "MEC", "low consumer demand", "high consumer demand"),
-                     values = c("agg. demand" = "black", "taxed agg. demand" = "red", "supply" = "orange", "MEC" = "darkolivegreen3", "high consumer demand" = "steelblue", "low consumer demand" = "purple"))
+  scale_color_manual(breaks = c("agg. demand", "supply", "MEC", "low consumer demand", "high consumer demand"),
+                     values = c("agg. demand" = "black", "supply" = "orange", "MEC" = "darkolivegreen3", "high consumer demand" = "steelblue", "low consumer demand" = "purple"))
 
 ```
 
@@ -127,20 +127,22 @@ PS <- function(q){
 
 PS_total <- PS(market_q) / 100
 
+env_cost <- MEC * market_q
+
 ```
 
 
 Under status quo:
 
-- Consumer benefit = $`r round(CS_total, 2)`  
-- Producer benefit = $`r round(PS_total, 2)`
-
+- **Consumer benefit = $`r round(CS_total, 2)` **
+- **Producer benefit = $`r round(PS_total, 2)` **
+- **Environmental cost = $`r round(env_cost, 2)` **
 
 ## Question 3
 3. How is the current consumer benefit divided between “high” and “low” income consumers?
 
-**The high-income consumers get $ `r round(high_income_CS, 2)`
-low-income consumers  $`r round(low_income_CS, 2)`**
+**The high-income consumers recieve $ `r round(high_income_CS, 2)` and the
+low-income consumers recieve $`r round(low_income_CS, 2)`**
 
 ## Question 4 
 
