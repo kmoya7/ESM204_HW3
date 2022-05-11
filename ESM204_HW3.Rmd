@@ -177,6 +177,12 @@ price_tax = seq(0, 30, length.out = 100)
 Qagg_tax <- map(price, demand_agg_tax) %>% unlist()
 
 agg_energy_demand_tax<- tibble(Qagg = Qagg_tax, price = price_tax)
-market_q_tax <- demand_agg_tax(10)
+market_p_tax <- demand_agg_tax(10) # P*
+#plug in market_q_tax into new demand tax equation
+
+
+market_q_tax <- demand_agg_tax(p,  market_p_tax)
+
 ```
 
+The optimal electricity tax is $`r round(market_q_tax, 2)`
