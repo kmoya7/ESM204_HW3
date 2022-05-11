@@ -47,20 +47,18 @@ MEC <- 5100*lb_to_ton # $.0197
 ## Question 2
 
 ```{r}
-model_demand_l <- lm(price_cents  ~ q_low_kwh, data=energy_demand)
-model_demand_h <- lm(price_cents ~ q_high_kwh, data=energy_demand)
-# need to rearrange the parameter to get Q(P)! 
-# Qagg = Qlow(P) + Qlow(h) 
-# Importantly, since their intercepts are different, we know that Qagg(P) will have a kink. I include an ifelse() statement to take care of the kink.
-# define a function to get demand
-demand <- function(p, model){
+# define function to get demand curve
+low_income <- lm(price_cents ~ q_low_kwh, data = energy_demand)
+high_income <- lm(price_cents ~ q_high_kwh, data = energy_demand)
+demand <-function(p, model){
   q <- (p - model$coefficients[[1]])/model$coefficients[[2]]
-  q <- ifelse(q<0,0,q)
+  q <- ifelse(q<0,0,q)  #addresses differences in y-intercepts
   return(q)
 }
+
 # for each p level, return estimated aggregate demand
 demand_agg <- function(p){
-  q <- demand(p, model_demand_l) + demand(p, model_demand_h)
+  q <- demand(p, low_income) + demand(p, high_income)
   return(q)
 }
 price = seq(0, 31.6, length.out = 100)
@@ -75,20 +73,24 @@ demand_tax <- function(p, model){
   return(q)
 }
 demand_agg_tax <- function(p){
-  q <- demand_tax(p, model_demand_l) + demand(p, model_demand_h) # high consumers are not subjugated to the tax
+  q <- demand_tax(p, low_income) + demand(p, high_income) # high consumers are not subjugated to the tax
   return(q)
 }
 price_tax = seq(0, 31.6, length.out = 100)
 Qagg_tax <- map(price, demand_agg_tax) %>% unlist()
 df2_tax<- tibble(Qagg = Qagg_tax, price = price_tax)
 market_q_tax <- demand_agg_tax(10)
+```
+
+```{r}
+# create demand and supply curve
 ggplot() +
   geom_line(df2, mapping = aes(x = Qagg, y =price, color = "agg. Demand")) +# Agg demand
   geom_line(df2_tax, mapping = aes(x=Qagg_tax, y = price_tax, color = "taxed agg. demand")) + #taxed agg demand
-  geom_abline(slope = coef(model_demand_l)[["q_low_kwh"]], 
-              intercept = coef(model_demand_l)[["(Intercept)"]], color="purple", linetype="twodash") + # Low consumer demand
-  geom_abline(slope = coef(model_demand_h)[["q_high_kwh"]], 
-              intercept = coef(model_demand_h)[["(Intercept)"]], color="steelblue", linetype="twodash") + # High consumer demand
+  geom_abline(slope = coef(low_income)[["q_low_kwh"]], 
+              intercept = coef(low_income)[["(Intercept)"]], color="purple", linetype="twodash") + # Low consumer demand
+  geom_abline(slope = coef(high_income)[["q_high_kwh"]], 
+              intercept = coef(high_income)[["(Intercept)"]], color="steelblue", linetype="twodash") + # High consumer demand
   geom_abline(slope = (10/market_q), intercept = 0, color = "orange", aes(value = "supply")) + # supply curve
   geom_abline(slope = 0, intercept = MEC, color = "darkolivegreen3", aes(value = "MEC")) + # MEC
   #geom_abline(slope = (10/market_q), intercept = MEC, color = "purple") + #we need to delete this line because this is a tax on the consumer
@@ -106,9 +108,9 @@ slope_supply <- (10/market_q)
 ```{r}
 # calculating surpluses at market equilibrium
 # CS calculation needs Y intercept of high demand/demand agg curve --> at 0 kWh, price would be $0.316
-high_sum <-summary.lm(model_demand_h)
+high_sum <-summary.lm(high_income)
 high_y_int <- high_sum$coefficients[1, 1] 
-low_sum <- summary.lm(model_demand_l)
+low_sum <- summary.lm(low_income)
 low_y_int <- low_sum$coefficients[1, 1]
 # Converted back to dollars
 cs_sq_high <- 0.5*market_q*((high_y_int/100) - 0.10)
@@ -124,7 +126,7 @@ env_cost_sq <- (MEC*market_q)/100
 ```
 
 - Aggregate monthly demand curve is the black curve with a kink, which is the horizontal sum of the low (gold dashed) and high (blue dashed) demand curves.
-- The supply curve is the green curve, which represents the marginal private cost curve. Its equation is P = `r round(slope_supply, 7)`Q
+- The supply curve is the green curve, which represents the marginal private cost curve. Its equation is P = `r round(slope_supply, 7)` Q
 
 Under status quo:
 
