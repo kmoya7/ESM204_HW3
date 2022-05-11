@@ -85,7 +85,7 @@ ggplot(agg_demand, aes(Qagg, price)) +
 
 ## Question 1
 - Current electricity cost is $0.10/kWh
-- One kWh electricity emits 0.85 lbs CO2
+- One kWh electricity emits 0.85 lbs CO^2^
 - 2204.62 lbs in 1 metric ton 
 - Interim SCC value of $51/metric ton or 5100 cents/metric ton (total external cost)
 
@@ -137,8 +137,8 @@ Qagg_tax <- map(price, demand_agg_tax) %>% unlist()
 df2_tax<- tibble(Qagg = Qagg_tax, price = price_tax)
 market_q_tax <- demand_agg_tax(10)
 ggplot() +
-  geom_line(df2, mapping = aes(x = Qagg, y =price, color = "black")) +# Agg demand
-  geom_line(df2_tax, mapping = aes(x=Qagg_tax, y = price_tax)) + #taxed agg demand
+  geom_line(df2, mapping = aes(x = Qagg, y =price, color = "Agg Demand")) +# Agg demand
+  geom_line(df2_tax, mapping = aes(x=Qagg_tax, y = price_tax, color = "taxed agg. demand")) + #taxed agg demand
     geom_abline(slope = coef(model_demand_l)[["q_low_kwh"]], 
               intercept = coef(model_demand_l)[["(Intercept)"]], color="goldenrod", linetype="twodash") + # Low consumer demand
   geom_abline(slope = coef(model_demand_h)[["q_high_kwh"]], 
@@ -179,6 +179,7 @@ env_cost_sq <- (MEC*market_q)/100
 - The supply curve is the green curve, which represents the marginal private cost curve. Its equation is P = `r round(slope_supply, 7)`Q
 
 Under status quo:
+
 - Consumer benefit = $`r round(cs_sq_total, 2)` 
 - Producer benefit = $`r round(ps_sq, 2)`
 - Environmental cost = $`r round(env_cost_sq, 2)`
