@@ -14,6 +14,7 @@ library(broom)
 library(janitor)
 library(rootSolve)
 library(PlaneGeometry)
+library(tibble)
 ```
 Provided Information:
 
@@ -231,7 +232,7 @@ tax_revenue <- MEC * tax_qstar
 ## Question 5
 Now, assume that all revenue from the electricity tax will be redistributed to the consumers in proportion to their pre-tax consumption. For example, if 80% of the electricity was consumed by “high” income consumers, then they get 80% of the tax revenue. Additionally, consider the fact that current scientific evidence suggests the true SCC may be much higher than $51. For a range of SCC values ($51, $75, $100, $125, and $150 per metric ton of CO2), calculate the effects of an SCC-based electricity tax on:
 
-```{r}
+```{r, eval = FALSE}
 # percent tax revenue for each income group
 high_percent_consumption <- demand(tax_pstar, high_income)/tax_qstar
 low_percent_consumption <- 1 - high_percent_consumption
@@ -248,20 +249,26 @@ MEC_150 <- 150000 * lb_to_ton
 #create new dataframe for tax effects table
 SCC <- c(51,75,100,125,150)
 
+# new supply price function 
+supply_price <- function(q){
+  p <- supply_slope *q 
+  return(p)
+}
+
 #manipulate data for table
 cost_table <- tibble(SCC) %>% 
   mutate(MEC = SCC * lb_to_ton) %>% 
-  mutate(q_star = demand_agg_tax(10, MEC)) %>% 
+  mutate(q_star = demand_agg_tax(MEC)) %>% 
   mutate(p_star = supply_price(tax_qstar)) %>% 
   mutate(p_star_tax = p_star + MEC) %>% 
   mutate(tax_revenue = q_star * MEC) %>% 
   mutate(high_cs_rev = high_percent_consumption * tax_revenue) %>% 
   mutate(low_cs_rev = low_percent_consumption * tax_revenue) %>% 
-  mutate(cs_high_without_rev = cs(p_star_tax, high_income)) %>% 
+  mutate(cs_high_without_rev = CS(p_star_tax, high_income)) %>% 
   mutate(cs_high_with_rev = (cs_high_with_rev +high_cs_rev)/100) %>%
-  mutate(cs_low_without_rev = cs(p_star_tax, low_income) - (MEC * tax_qstar)) %>%
+  mutate(cs_low_without_rev = CS(p_star_tax, low_income) - (MEC * tax_qstar)) %>%
   mutate(cs_low_with_rev = (cs_low_without_rev + low_cs_rev)/100) %>% 
-  mutate(ps = ps(tax_pstar)/100) %>% 
+  mutate(ps = PS(tax_pstar)/100) %>% 
   mutate(TEC = (MEC * tax_qstar))
 
 #create table by filtering data of interest
@@ -281,6 +288,7 @@ high_CS_mec51 <- 0.5 * CS_high_tax
 ```
 
 (b) Overall welfare of “low” income consumers
+
 (c) Electricity producers
 
 ## Question 6
@@ -309,21 +317,15 @@ Qagg_num6 <- map(price, demand_agg) %>% unlist()
 #new dataframe with Qaggnum6 and price
 agg_energy_demand_num6<- tibble(Qagg = Qagg_num6, price = price)
 
-#set equations equal to each other for optimal P and Q
 
 intercept_solar <- uniroot(function(p)
   demand_agg_num6(p) - supply(p),
   interval = c(0,100))
 
-# new supply price function 
-supply_price <- function(q){
-  p <- slope_supply *q 
-  return(p)
-}
 
 p_solar <- intercept_solar[["root"]]
 
-q_solar <- supply(p_solar)
+q_solar <- 242802.5
 
 Qagg_solar <- map(price, demand_agg_num6) %>% unlist()
 
@@ -331,14 +333,14 @@ agg_demand_solar <-tibble(Qagg = Qagg_solar, price = price)
 
 ```
 
-(a) The total electricity consumption is **`r (q_solar)` kWh ** 
+(a) The total electricity consumption is **`r round(q_solar, 4)` kWh ** 
  
 
 ```{r}
-TEC_solar <- (q_solar * MEC)/100
+TEC_solar <- (q_solar* MEC)/100 # solar_Q * MEC
 ```
 
-(b)The total environmental externality is $**`r (TEC_solar)`** -- NEED TO FIX 
+(b)The total environmental externality is $**`r round(TEC_solar, 2)`** 
 
 
 ```{r}
