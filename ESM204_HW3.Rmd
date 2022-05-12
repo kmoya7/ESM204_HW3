@@ -13,6 +13,8 @@ library(equatiomatic)
 library(broom)
 library(janitor)
 library(rootSolve)
+install.packages("remotes")
+remotes::install_github("andrewheiss/reconPlots")
 ```
 
 to create a function, we want to sum Qs
@@ -34,7 +36,7 @@ energy_demand <- read_csv("HW3_data.csv") %>%
 ```
 
 ## Question 1
-One kWh of electricity emits 0.85 pounds of CO2. Assuming that the interim SCC correctly reflects the total social cost of one metric ton of CO2, what is the marginal externality cost per kwH of electricity?
+One kWh of electricity emits 0.85 pounds of CO^2^. Assuming that the interim SCC correctly reflects the total social cost of one metric ton of CO2, what is the marginal externality cost per kwH of electricity?
 
 ```{r}
 # convert lbs to metric ton
@@ -99,7 +101,7 @@ ggplot() +
 
 ```
 
-The aggregate monthly demand curve (black line) is the horizontal sum of the low income and the high income demand curves (dashed lines). The supply or MPC curve(orange line) is P = `r supply_slope` Q
+The aggregate monthly demand curve (black line) is the horizontal sum of the low income and the high income demand curves (dashed lines). The supply or MPC curve (orange line) is P = `r supply_slope` Q
 
 
 ```{r}
@@ -180,7 +182,7 @@ agg_energy_demand_tax<- tibble(Qagg = Qagg_tax, price = price_tax)
 market_p_tax <- demand_agg_tax(10) # P*
 #plug in market_q_tax into new demand tax equation
 
-
+curve_interect(demand_agg_tax, supply, empirical= FALSE, domain = c(0, 600000))
 market_q_tax <- demand_agg_tax(10)
 
 ```
