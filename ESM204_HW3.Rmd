@@ -13,8 +13,7 @@ library(equatiomatic)
 library(broom)
 library(janitor)
 library(rootSolve)
-install.packages("remotes")
-remotes::install_github("andrewheiss/reconPlots")
+library(PlaneGeometry)
 ```
 
 to create a function, we want to sum Qs
@@ -84,7 +83,7 @@ supply <- function(q){
 # create demand and supply curve
 ggplot() +
   geom_line(agg_energy_demand, mapping = aes(x = Qagg, y =price, color = "agg. Demand")) +# Agg demand
-  # geom_line(df2_tax, mapping = aes(x=Qagg_tax, y = price_tax, color = "taxed agg. demand")) + #taxed agg demand
+  #geom_line(agg_energy_demand_tax, mapping = aes(x=Qagg_tax, y = price_tax, color = "taxed agg. demand")) + #taxed agg demand
   geom_abline(slope = coef(low_income)[["q_low_kwh"]], 
               intercept = coef(low_income)[["(Intercept)"]], color="purple", linetype="twodash") + # Low consumer demand
   geom_abline(slope = coef(high_income)[["q_high_kwh"]], 
@@ -150,14 +149,6 @@ low-income consumers receive $`r round(low_income_CS, 2)`**
 Derive the optimal electricity tax (in cents per kWh) using the interim SCC. Noting that recent research has shown the poor face a disproportionate share of the impacts from climate change, assume that the climate externality is borne entirely by the “low” income group. What would be the effects of this tax on:
 
 (a) The amount of electricity produced and consumed
-(b) The price of electricity
-(c) Overall welfare of "high" income consumers
-(d) Overall welfare of "low" income consumers
-(e) Power suppliers
-(f) Total environmental damage
-(g) Total tax revenue generated
-
-
 - 2204.62 lbs in 1 metric ton 
 - Interim SCC value of $51/metric ton or 5100 cents/metric ton (total external cost)
 ```{r}
@@ -181,10 +172,28 @@ Qagg_tax <- map(price, demand_agg_tax) %>% unlist()
 agg_energy_demand_tax<- tibble(Qagg = Qagg_tax, price = price_tax)
 market_p_tax <- demand_agg_tax(10) # P*
 #plug in market_q_tax into new demand tax equation
-
-curve_interect(demand_agg_tax, supply, empirical= FALSE, domain = c(0, 600000))
 market_q_tax <- demand_agg_tax(10)
+
 
 ```
 
-The optimal electricity tax is $`r round(market_q_tax, 2)`
+```{r}
+
+supply_pointx <- 15/supply_slope
+
+tax_demand_line <- Line$new(B = c(801868.98,0), A = c(235880.43,20))
+supply_line <- Line$new(A = c(0,0), B = c(supply_pointx, 15))
+tax_intersect <- intersectionLineLine(tax_demand_line, supply_line)
+# 525035.350330      9.782305
+```
+
+**The optimal amount of electricity is $`r round(tax_intersect[1], 2)`
+and the optimal electricity tax is $`r round(tax_intersect[2], 2)`**
+
+(b) The price of electricity
+(c) Overall welfare of "high" income consumers
+(d) Overall welfare of "low" income consumers
+(e) Power suppliers
+(f) Total environmental damage
+(g) Total tax revenue generated
+
