@@ -181,7 +181,7 @@ market_p_tax <- demand_agg_tax(10) # P*
 #plug in market_q_tax into new demand tax equation
 
 
-market_q_tax <- demand_agg_tax(p,  market_p_tax)
+market_q_tax <- demand_agg_tax(10)
 
 ```
 
