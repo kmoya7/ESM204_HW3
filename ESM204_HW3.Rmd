@@ -15,6 +15,8 @@ library(janitor)
 library(rootSolve)
 library(PlaneGeometry)
 library(tibble)
+
+library(scales)
 ```
 Provided Information:
 
@@ -208,8 +210,8 @@ CS_low_tax <- 0.5*tax_qstar*((low_yint) - (tax_pstar - MEC))
 CS_low_tax_ec <- CS_low_tax - (env_cost)
 # test
 ```
-(c) Overall welfare of "high" income consumers: **$ `r round((CS_high_tax/100), 2)` ** NOT CORRECT
-(d) Overall welfare of "low" income consumers: **$ `r round((CS_low_tax_ec/100), 2)` ** NEED TO FIX
+(c) Overall welfare of "high" income consumers: **$ `r round((CS_high_tax/100), 2)` ** 
+(d) Overall welfare of "low" income consumers: **$ `r round((CS_low_tax_ec/100), 2)` ** 
 
 ```{r}
 power_suppliers <- PS(tax_qstar) /100
@@ -232,13 +234,19 @@ tax_revenue <- MEC * tax_qstar
 ## Question 5
 Now, assume that all revenue from the electricity tax will be redistributed to the consumers in proportion to their pre-tax consumption. For example, if 80% of the electricity was consumed by “high” income consumers, then they get 80% of the tax revenue. Additionally, consider the fact that current scientific evidence suggests the true SCC may be much higher than $51. For a range of SCC values ($51, $75, $100, $125, and $150 per metric ton of CO2), calculate the effects of an SCC-based electricity tax on:
 
-```{r, eval = FALSE}
+```{r}
 # percent tax revenue for each income group
 high_percent_consumption <- demand(tax_pstar, high_income)/tax_qstar
 low_percent_consumption <- 1 - high_percent_consumption
 # tax revenue for each group in $
 high_share <- tax_revenue * high_percent_consumption
 low_share <- tax_revenue * low_percent_consumption
+
+change_in_MEC <- function(price, SCC, quantity, high_share, low_share){
+  mec_new <- MEC(0.85, SCC)
+  agg_demand_new <- demand_agg(price, mec_new) %>% 
+    as.data.frame() %>% 
+      cbind(price) 
 
 MEC_51 <- 5100 * lb_to_ton
 MEC_75 <- 7500 * lb_to_ton
@@ -247,47 +255,49 @@ MEC_125 <- 125000 * lb_to_ton
 MEC_150 <- 150000 * lb_to_ton
 
 #create new dataframe for tax effects table
-SCC <- c(51,75,100,125,150)
+SCC <- c(MEC_51,MEC_75,MEC_100,MEC_125, MEC_150)
 
+demand_scc <- function(p, model, scc){
+  q <- (p - (model$coefficients[[1]] - SCC[scc]))/model$coefficients[[2]]
+  q <- ifelse(q<0,0,q)
+  return(q)
+
+}
 # new supply price function 
 supply_price <- function(q){
   p <- supply_slope *q 
   return(p)
 }
 
-#manipulate data for table
-cost_table <- tibble(SCC) %>% 
-  mutate(MEC = SCC * lb_to_ton) %>% 
-  mutate(q_star = demand_agg_tax(MEC)) %>% 
-  mutate(p_star = supply_price(tax_qstar)) %>% 
-  mutate(p_star_tax = p_star + MEC) %>% 
-  mutate(tax_revenue = q_star * MEC) %>% 
-  mutate(high_cs_rev = high_percent_consumption * tax_revenue) %>% 
-  mutate(low_cs_rev = low_percent_consumption * tax_revenue) %>% 
-  mutate(cs_high_without_rev = CS(p_star_tax, high_income)) %>% 
-  mutate(cs_high_with_rev = (cs_high_with_rev +high_cs_rev)/100) %>%
-  mutate(cs_low_without_rev = CS(p_star_tax, low_income) - (MEC * tax_qstar)) %>%
-  mutate(cs_low_with_rev = (cs_low_without_rev + low_cs_rev)/100) %>% 
-  mutate(ps = PS(tax_pstar)/100) %>% 
-  mutate(TEC = (MEC * tax_qstar))
+demand_agg_75 <- function(p){
+  q <- demand_scc(p, low_income, 1) + demand_scc(p, high_income, 1)
+  return(q) 
 
-#create table by filtering data of interest
-filtered_cost = subset(cost_table, 
-                       select = c(SCC, cs_low_with_rev, cs_high_with_rev,ps))
-
-kable(filtered_cost, caption = "Table 1. Distribution Impacts of Social Costs of carbon among high and low income consumers and producers", 
-      col.names = c("Social Cost of Carbon ($/ metric ton)", "High Income Welfare ($)", "Low Income Welfare ($)", "Electricity Producer Welfare ($)")) 
+}
+p_75 <- uniroot(function(p)
+  demand_agg_75(p) - supply(p),
+  interval = c(0,20))
+}
 
 
+
+```
+
+
+
+```{r}
+high_CS_mec51 <- (high_share * tax_revenue) + CS_high_tax
 ```
 
 (a) Overall welfare of “high” income consumers
+The consumer surplus @ $51/ton is `r round(high_CS_mec51, 4)`
 
 ```{r}
-high_CS_mec51 <- 0.5 * CS_high_tax
+low_CS_mec51 <- (low_share * tax_revenue) + CS_low_tax_ec
 ```
 
 (b) Overall welfare of “low” income consumers
+The consumer surplus @ $51/ton is `r round(low_CS_mec51, 4)`
 
 (c) Electricity producers
 
